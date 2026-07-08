@@ -1,0 +1,6 @@
+{
+  "name": "VnExpress Marathon Data Analysis",
+  "description": "Dashboard for analyzing VnExpress Marathon participant data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
