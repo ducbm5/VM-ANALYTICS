@@ -56,6 +56,21 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, L
 
 const DEFAULT_TOKEN = "898989";
 
+const isVietnam = (nat: string) => {
+  const n = nat.toLowerCase().trim();
+  return n === "việt nam" || n === "vietnam" || n === "vn" || n.includes("viet");
+};
+
+const isHanoi = (prov: string) => {
+  const p = prov.toLowerCase().trim();
+  return p.includes("hà nội") || p.includes("hanoi") || p === "hn";
+};
+
+const isHcm = (prov: string) => {
+  const p = prov.toLowerCase().trim();
+  return p.includes("hồ chí minh") || p.includes("ho chi minh") || p.includes("hcm") || p.includes("sài gòn") || p.includes("sai gon");
+};
+
 interface DashboardSectionProps {
   title: string;
   icon: React.ReactNode;
@@ -100,7 +115,8 @@ export default function App() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   // Filters
-  const [selectedRace, setSelectedRace] = useState<string>("all");
+  const [selectedRaces, setSelectedRaces] = useState<string[]>([]);
+  const [selectedYear, setSelectedYear] = useState<string>("all");
   const [selectedDistance, setSelectedDistance] = useState<string>("all");
   const [selectedStage, setSelectedStage] = useState<string>("all");
   const [selectedGender, setSelectedGender] = useState<string>("all");
@@ -150,7 +166,8 @@ export default function App() {
   };
 
   const resetFilters = () => {
-    setSelectedRace("all");
+    setSelectedRaces([]);
+    setSelectedYear("all");
     setSelectedDistance("all");
     setSelectedStage("all");
     setSelectedGender("all");
@@ -228,7 +245,8 @@ export default function App() {
         genderStats: gender,
         registrationTypeStats: registrationTypes,
         currentFilters: {
-          race: selectedRace,
+          races: selectedRaces.length === 0 ? "All" : selectedRaces.join(", "),
+          year: selectedYear,
           distance: selectedDistance,
           stage: selectedStage,
           gender: selectedGender,
@@ -340,10 +358,17 @@ export default function App() {
 
   const filteredData = useMemo(() => {
     return data.filter((p) => {
-      const matchesRace = selectedRace === "all" || p.RACE === selectedRace;
+      const matchesRace = selectedRaces.length === 0 || (p.RACE && selectedRaces.includes(p.RACE));
       const matchesDistance = selectedDistance === "all" || p.DISTANCE === selectedDistance;
       const matchesStage = selectedStage === "all" || p.STAGE === selectedStage;
       
+      const matchesYear = selectedYear === "all" || (() => {
+        if (!p.RACE) return false;
+        const match = p.RACE.match(/\d{2}$/);
+        const yr = match ? "20" + match[0] : "Khác";
+        return yr === selectedYear;
+      })();
+
       const matchesGender = selectedGender === "all" || (() => {
         const g = p.GENDER?.toUpperCase().trim();
         if (selectedGender === "Nam") return g === "M" || g === "NAM";
@@ -356,9 +381,9 @@ export default function App() {
         !searchTerm ||
         p.RACE?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      return matchesRace && matchesDistance && matchesStage && matchesGender && matchesSearch;
+      return matchesRace && matchesYear && matchesDistance && matchesStage && matchesGender && matchesSearch;
     });
-  }, [data, selectedRace, selectedDistance, selectedStage, selectedGender, searchTerm]);
+  }, [data, selectedRaces, selectedYear, selectedDistance, selectedStage, selectedGender, searchTerm]);
 
   // Revenue Calculation
   const revenueStats = useMemo(() => {
@@ -400,6 +425,43 @@ export default function App() {
     return stats;
   }, [filteredData]);
 
+  // Nationality Statistics (Viet Nam vs International grouping)
+  const nationalityGroupStats = useMemo(() => {
+    let vnCount = 0;
+    let vnRevenue = 0;
+    let intlCount = 0;
+    let intlRevenue = 0;
+
+    filteredData.forEach((p) => {
+      const nat = p.NATIONALITY?.trim() || "";
+      const amount = parseFloat(p.TXNAMOUNT?.replace(/,/g, "") || "0");
+      
+      if (isVietnam(nat)) {
+        vnCount += 1;
+        vnRevenue += amount;
+      } else {
+        intlCount += 1;
+        intlRevenue += amount;
+      }
+    });
+
+    const total = vnCount + intlCount;
+
+    return {
+      vietnam: {
+        count: vnCount,
+        revenue: vnRevenue,
+        percentage: total > 0 ? ((vnCount / total) * 100).toFixed(1) : "0",
+      },
+      international: {
+        count: intlCount,
+        revenue: intlRevenue,
+        percentage: total > 0 ? ((intlCount / total) * 100).toFixed(1) : "0",
+      },
+      total,
+    };
+  }, [filteredData]);
+
   // Nationality Statistics
   const nationalityStats = useMemo(() => {
     const stats: Record<string, { count: number; revenue: number }> = {};
@@ -433,6 +495,53 @@ export default function App() {
     return Object.entries(stats)
       .map(([name, val]) => ({ name, ...val }))
       .sort((a, b) => b.count - a.count);
+  }, [filteredData]);
+
+  // Province/City Group Statistics (HN, HCM, Others)
+  const provinceGroupStats = useMemo(() => {
+    let hnCount = 0;
+    let hnRevenue = 0;
+    let hcmCount = 0;
+    let hcmRevenue = 0;
+    let otherCount = 0;
+    let otherRevenue = 0;
+
+    filteredData.forEach((p) => {
+      const province = p.PROVINCE_CITY?.trim() || "Chưa xác định";
+      const amount = parseFloat(p.TXNAMOUNT?.replace(/,/g, "") || "0");
+
+      if (isHanoi(province)) {
+        hnCount += 1;
+        hnRevenue += amount;
+      } else if (isHcm(province)) {
+        hcmCount += 1;
+        hcmRevenue += amount;
+      } else {
+        otherCount += 1;
+        otherRevenue += amount;
+      }
+    });
+
+    const total = hnCount + hcmCount + otherCount;
+
+    return {
+      hanoi: {
+        count: hnCount,
+        revenue: hnRevenue,
+        percentage: total > 0 ? ((hnCount / total) * 100).toFixed(1) : "0",
+      },
+      hcm: {
+        count: hcmCount,
+        revenue: hcmRevenue,
+        percentage: total > 0 ? ((hcmCount / total) * 100).toFixed(1) : "0",
+      },
+      others: {
+        count: otherCount,
+        revenue: otherRevenue,
+        percentage: total > 0 ? ((otherCount / total) * 100).toFixed(1) : "0",
+      },
+      total,
+    };
   }, [filteredData]);
 
   // Age Group Statistics
@@ -542,6 +651,21 @@ export default function App() {
     return Array.from(names).sort();
   }, [data]);
 
+  const allYears = useMemo(() => {
+    const years = new Set<string>();
+    data.forEach(p => {
+      if (p.RACE) {
+        const match = p.RACE.match(/\d{2}$/);
+        if (match) {
+          years.add("20" + match[0]);
+        } else {
+          years.add("Khác");
+        }
+      }
+    });
+    return Array.from(years).sort().reverse();
+  }, [data]);
+
   if (isAuthChecking) {
     return (
       <div className="flex items-center justify-center h-screen bg-[var(--bg)]">
@@ -642,13 +766,77 @@ export default function App() {
             <Label className="col-header flex items-center gap-2">
               <Activity className="w-3 h-3" /> Race Name
             </Label>
+            <Popover>
+              <PopoverTrigger 
+                className="w-full justify-between rounded-none border border-[var(--line)] bg-transparent font-mono text-xs h-10 px-3 hover:bg-white/50 cursor-pointer text-left flex items-center"
+              >
+                <span className="truncate">
+                  {selectedRaces.length === 0 
+                    ? "All Races" 
+                    : selectedRaces.length === 1 
+                      ? selectedRaces[0] 
+                      : `${selectedRaces.length} races selected`}
+                </span>
+                <Filter className="w-4 h-4 ml-2 opacity-50 shrink-0" />
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-4 bg-white/95 backdrop-blur-md rounded-none border border-[var(--line)] font-mono text-xs max-h-[350px] overflow-y-auto space-y-2 shadow-lg" align="start">
+                <div className="flex items-center justify-between border-b border-[var(--line)]/10 pb-2 mb-2">
+                  <span className="font-bold uppercase tracking-wider">Select Races</span>
+                  {selectedRaces.length > 0 && (
+                    <button 
+                      onClick={() => setSelectedRaces([])} 
+                      className="text-[10px] uppercase underline opacity-60 hover:opacity-100"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-2 p-1 hover:bg-black/5 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedRaces.length === 0}
+                      onChange={() => setSelectedRaces([])}
+                      className="rounded-none border-[var(--line)] accent-black"
+                    />
+                    <span className={cn(selectedRaces.length === 0 && "font-bold")}>ALL RACES</span>
+                  </label>
+                  {allRaceNames.map(name => {
+                    const isChecked = selectedRaces.includes(name);
+                    return (
+                      <label key={name} className="flex items-center gap-2 p-1 hover:bg-black/5 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={isChecked}
+                          onChange={() => {
+                            if (isChecked) {
+                              setSelectedRaces(selectedRaces.filter(r => r !== name));
+                            } else {
+                              setSelectedRaces([...selectedRaces, name]);
+                            }
+                          }}
+                          className="rounded-none border-[var(--line)] accent-black"
+                        />
+                        <span className={cn(isChecked && "font-bold")}>{name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="col-header flex items-center gap-2">
+              <CalendarIcon className="w-3 h-3" /> Year
+            </Label>
             <select 
-              className="w-full bg-transparent border border-[var(--line)] px-3 py-2 text-sm font-mono focus:outline-none focus:bg-white/50 transition-colors"
-              value={selectedRace}
-              onChange={(e) => setSelectedRace(e.target.value)}
+              className="w-full bg-transparent border border-[var(--line)] px-3 py-2 text-sm font-mono focus:outline-none focus:bg-white/50 h-10 transition-colors"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
             >
-              <option value="all">All Races</option>
-              {allRaceNames.map(name => <option key={name} value={name}>{name}</option>)}
+              <option value="all">All Years</option>
+              {allYears.map(year => <option key={year} value={year}>{year}</option>)}
             </select>
           </div>
 
@@ -657,7 +845,7 @@ export default function App() {
               <Filter className="w-3 h-3" /> Distance
             </Label>
             <select 
-              className="w-full bg-transparent border border-[var(--line)] px-3 py-2 text-sm font-mono focus:outline-none focus:bg-white/50 transition-colors"
+              className="w-full bg-transparent border border-[var(--line)] px-3 py-2 text-sm font-mono focus:outline-none focus:bg-white/50 h-10 transition-colors"
               value={selectedDistance}
               onChange={(e) => setSelectedDistance(e.target.value)}
             >
@@ -671,7 +859,7 @@ export default function App() {
               <Activity className="w-3 h-3" /> Stage
             </Label>
             <select 
-              className="w-full bg-transparent border border-[var(--line)] px-3 py-2 text-sm font-mono focus:outline-none focus:bg-white/50 transition-colors"
+              className="w-full bg-transparent border border-[var(--line)] px-3 py-2 text-sm font-mono focus:outline-none focus:bg-white/50 h-10 transition-colors"
               value={selectedStage}
               onChange={(e) => setSelectedStage(e.target.value)}
             >
@@ -685,7 +873,7 @@ export default function App() {
               <Users className="w-3 h-3" /> Gender
             </Label>
             <select 
-              className="w-full bg-transparent border border-[var(--line)] px-3 py-2 text-sm font-mono focus:outline-none focus:bg-white/50 transition-colors"
+              className="w-full bg-transparent border border-[var(--line)] px-3 py-2 text-sm font-mono focus:outline-none focus:bg-white/50 h-10 transition-colors"
               value={selectedGender}
               onChange={(e) => setSelectedGender(e.target.value)}
             >
@@ -704,7 +892,7 @@ export default function App() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40" />
               <Input 
                 placeholder="Search by Race..." 
-                className="pl-10 rounded-none border-[var(--line)] bg-transparent focus:ring-0 focus:bg-white/50 font-mono text-sm transition-colors"
+                className="pl-10 rounded-none border-[var(--line)] bg-transparent focus:ring-0 focus:bg-white/50 font-mono text-sm h-10 transition-colors"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -845,7 +1033,27 @@ export default function App() {
           icon={<Globe className="w-5 h-5" />}
           description="Distribution and revenue by runner nationality"
         >
-          <div className="max-h-96 overflow-y-auto border border-[var(--line)]/10">
+          {/* Vietnam vs International Segment Summary Cards */}
+          <div className="grid grid-cols-2 gap-4 p-4 border-b border-[var(--line)]/10 bg-white/40">
+            <div className="p-3 border border-[var(--line)]/10 bg-white/60">
+              <div className="text-[10px] font-mono uppercase opacity-50 tracking-wider">Việt Nam (Domestic)</div>
+              <div className="flex items-baseline justify-between mt-1">
+                <div className="text-lg font-serif italic">{nationalityGroupStats.vietnam.count.toLocaleString()} <span className="text-xs font-mono opacity-60">BIBs</span></div>
+                <div className="text-xs font-mono font-bold text-slate-700">{nationalityGroupStats.vietnam.percentage}%</div>
+              </div>
+              <div className="text-[10px] font-mono mt-1 opacity-60 font-medium">{nationalityGroupStats.vietnam.revenue.toLocaleString()} VND</div>
+            </div>
+            <div className="p-3 border border-[var(--line)]/10 bg-white/60">
+              <div className="text-[10px] font-mono uppercase opacity-50 tracking-wider">Quốc Tế (International)</div>
+              <div className="flex items-baseline justify-between mt-1">
+                <div className="text-lg font-serif italic">{nationalityGroupStats.international.count.toLocaleString()} <span className="text-xs font-mono opacity-60">BIBs</span></div>
+                <div className="text-xs font-mono font-bold text-slate-700">{nationalityGroupStats.international.percentage}%</div>
+              </div>
+              <div className="text-[10px] font-mono mt-1 opacity-60 font-medium">{nationalityGroupStats.international.revenue.toLocaleString()} VND</div>
+            </div>
+          </div>
+
+          <div className="max-h-80 overflow-y-auto border border-[var(--line)]/10">
             <Table>
               <TableHeader className="bg-[var(--ink)] sticky top-0 z-10">
                 <TableRow className="hover:bg-transparent border-none">
@@ -878,7 +1086,35 @@ export default function App() {
           icon={<MapPin className="w-5 h-5" />}
           description="Regional runner participation and sales volume"
         >
-          <div className="max-h-96 overflow-y-auto border border-[var(--line)]/10">
+          {/* Hanoi vs HCM vs Others Segment Summary Cards */}
+          <div className="grid grid-cols-3 gap-3 p-4 border-b border-[var(--line)]/10 bg-white/40">
+            <div className="p-3 border border-[var(--line)]/10 bg-white/60">
+              <div className="text-[10px] font-mono uppercase opacity-50 tracking-wider">Hà Nội</div>
+              <div className="flex items-baseline justify-between mt-1">
+                <div className="text-base md:text-lg font-serif italic">{provinceGroupStats.hanoi.count.toLocaleString()} <span className="text-[10px] font-mono opacity-60">BIBs</span></div>
+                <div className="text-[10px] font-mono font-bold text-slate-700">{provinceGroupStats.hanoi.percentage}%</div>
+              </div>
+              <div className="text-[10px] font-mono mt-1 opacity-60 font-medium">{provinceGroupStats.hanoi.revenue.toLocaleString()} VND</div>
+            </div>
+            <div className="p-3 border border-[var(--line)]/10 bg-white/60">
+              <div className="text-[10px] font-mono uppercase opacity-50 tracking-wider">TP. Hồ Chí Minh</div>
+              <div className="flex items-baseline justify-between mt-1">
+                <div className="text-base md:text-lg font-serif italic">{provinceGroupStats.hcm.count.toLocaleString()} <span className="text-[10px] font-mono opacity-60">BIBs</span></div>
+                <div className="text-[10px] font-mono font-bold text-slate-700">{provinceGroupStats.hcm.percentage}%</div>
+              </div>
+              <div className="text-[10px] font-mono mt-1 opacity-60 font-medium">{provinceGroupStats.hcm.revenue.toLocaleString()} VND</div>
+            </div>
+            <div className="p-3 border border-[var(--line)]/10 bg-white/60">
+              <div className="text-[10px] font-mono uppercase opacity-50 tracking-wider">Tỉnh thành khác</div>
+              <div className="flex items-baseline justify-between mt-1">
+                <div className="text-base md:text-lg font-serif italic">{provinceGroupStats.others.count.toLocaleString()} <span className="text-[10px] font-mono opacity-60">BIBs</span></div>
+                <div className="text-[10px] font-mono font-bold text-slate-700">{provinceGroupStats.others.percentage}%</div>
+              </div>
+              <div className="text-[10px] font-mono mt-1 opacity-60 font-medium">{provinceGroupStats.others.revenue.toLocaleString()} VND</div>
+            </div>
+          </div>
+
+          <div className="max-h-80 overflow-y-auto border border-[var(--line)]/10">
             <Table>
               <TableHeader className="bg-[var(--ink)] sticky top-0 z-10">
                 <TableRow className="hover:bg-transparent border-none">
