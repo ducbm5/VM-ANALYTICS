@@ -880,7 +880,6 @@ export default function App() {
               <option value="all">All Genders</option>
               <option value="Nam">Nam</option>
               <option value="Nữ">Nữ</option>
-              <option value="Khác">Khác/Chưa rõ</option>
             </select>
           </div>
 
