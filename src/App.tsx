@@ -250,6 +250,7 @@ export default function App() {
   const [selectedDistance, setSelectedDistance] = useState<string>("all");
   const [selectedStage, setSelectedStage] = useState<string>("all");
   const [selectedGender, setSelectedGender] = useState<string>("all");
+  const [selectedAges, setSelectedAges] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
@@ -331,6 +332,7 @@ export default function App() {
     setSelectedDistance("all");
     setSelectedStage("all");
     setSelectedGender("all");
+    setSelectedAges([]);
     setSearchTerm("");
     setStartDate("");
     setEndDate("");
@@ -413,6 +415,7 @@ export default function App() {
           distance: selectedDistance,
           stage: selectedStage,
           gender: selectedGender,
+          age: selectedAges.length === 0 ? "All" : selectedAges.join(", "),
           search: searchTerm || "None"
         }
       };
@@ -563,6 +566,8 @@ export default function App() {
         return false;
       })();
 
+      const matchesAge = selectedAges.length === 0 || (p.AGE && selectedAges.includes(p.AGE.trim()));
+
       const matchesSearch = 
         !searchTerm ||
         p.RACE?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -586,9 +591,9 @@ export default function App() {
         return true;
       })();
 
-      return matchesRace && matchesYear && matchesDistance && matchesStage && matchesGender && matchesSearch && matchesDate;
+      return matchesRace && matchesYear && matchesDistance && matchesStage && matchesGender && matchesAge && matchesSearch && matchesDate;
     });
-  }, [data, selectedRaces, selectedYear, selectedDistance, selectedStage, selectedGender, searchTerm, startDate, endDate]);
+  }, [data, selectedRaces, selectedYear, selectedDistance, selectedStage, selectedGender, selectedAges, searchTerm, startDate, endDate]);
 
   // Revenue Calculation
   const revenueStats = useMemo(() => {
@@ -1092,6 +1097,20 @@ export default function App() {
     return Array.from(stages).sort();
   }, [data]);
 
+  const allAges = useMemo(() => {
+    const ages = new Set<string>();
+    data.forEach(p => {
+      const a = p.AGE?.trim();
+      if (a) ages.add(a);
+    });
+    return Array.from(ages).sort((a, b) => {
+      const numA = parseInt(a, 10);
+      const numB = parseInt(b, 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.localeCompare(b, "vi");
+    });
+  }, [data]);
+
   const allRaceNames = useMemo(() => {
     const names = new Set<string>();
     data.forEach(p => { if (p.RACE) names.add(p.RACE); });
@@ -1292,7 +1311,7 @@ export default function App() {
           <div className="border border-[#141414] bg-[#faf6ee] p-4 flex flex-col justify-between space-y-3 relative shadow-[2px_2px_0px_0px_rgba(20,20,20,0.1)]">
             <div className="flex justify-between items-start">
               <span className="text-[10px] font-mono uppercase font-bold text-[#141414]/70 flex items-center gap-1">
-                <Users className="w-3 h-3 text-[#141414]" /> TỔNG VĐV SỬ DỤNG
+                <Users className="w-3 h-3 text-[#141414]" /> TỔNG VĐV
               </span>
               <span className="bg-[#141414] text-white px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase">
                 TOTAL
@@ -1315,7 +1334,7 @@ export default function App() {
           <div className="border border-[#141414] bg-[#faf6ee] p-4 flex flex-col justify-between space-y-3 relative shadow-[2px_2px_0px_0px_rgba(20,20,20,0.1)]">
             <div className="flex justify-between items-start">
               <span className="text-[10px] font-mono uppercase font-bold text-[#141414]/70 flex items-center gap-1">
-                <Activity className="w-3 h-3 text-[#141414]" /> GIẢI PHỔ BIẾN NHẤT
+                <Activity className="w-3 h-3 text-[#141414]" /> GIẢI NỔI BẬT NHẤT
               </span>
               <span className="bg-[#141414] text-white px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase">
                 TOP 1
@@ -1405,7 +1424,7 @@ export default function App() {
         </div>
 
         <div className="bg-[#faf6ee] p-5 border border-[#141414] shadow-[2px_2px_0px_0px_rgba(20,20,20,0.1)] space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
             {/* Race Name */}
             <div className="space-y-1">
               <Label className="font-mono text-[10px] font-bold uppercase text-[#141414] flex items-center gap-1">
@@ -1532,10 +1551,75 @@ export default function App() {
               </select>
             </div>
 
+            {/* Age */}
+            <div className="space-y-1">
+              <Label className="font-mono text-[10px] font-bold uppercase text-[#141414] flex items-center gap-1">
+                6. ĐỘ TUỔI (AGE)
+              </Label>
+              <Popover>
+                <PopoverTrigger 
+                  className="w-full justify-between rounded-none border border-[#141414] bg-[#f2ece2] font-mono text-xs h-9 px-2.5 hover:bg-white cursor-pointer text-left flex items-center"
+                >
+                  <span className="truncate">
+                    {selectedAges.length === 0 
+                      ? "All Ages" 
+                      : selectedAges.length === 1 
+                        ? selectedAges[0] 
+                        : `${selectedAges.length} ages selected`}
+                  </span>
+                  <Filter className="w-3.5 h-3.5 ml-1.5 opacity-60 shrink-0" />
+                </PopoverTrigger>
+                <PopoverContent className="w-[240px] p-3 bg-[#faf6ee] rounded-none border border-[#141414] font-mono text-xs max-h-[320px] overflow-y-auto space-y-2 shadow-xl" align="start">
+                  <div className="flex items-center justify-between border-b border-[#141414]/20 pb-1.5 mb-1.5">
+                    <span className="font-bold uppercase tracking-wider">Select Ages</span>
+                    {selectedAges.length > 0 && (
+                      <button 
+                        onClick={() => setSelectedAges([])} 
+                        className="text-[10px] uppercase underline opacity-70 hover:opacity-100"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-2 p-1 hover:bg-[#141414]/5 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedAges.length === 0}
+                        onChange={() => setSelectedAges([])}
+                        className="rounded-none border-[#141414] accent-[#141414]"
+                      />
+                      <span className={cn(selectedAges.length === 0 && "font-bold")}>ALL AGES</span>
+                    </label>
+                    {allAges.map(age => {
+                      const isChecked = selectedAges.includes(age);
+                      return (
+                        <label key={age} className="flex items-center gap-2 p-1 hover:bg-[#141414]/5 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setSelectedAges(selectedAges.filter(a => a !== age));
+                              } else {
+                                setSelectedAges([...selectedAges, age]);
+                              }
+                            }}
+                            className="rounded-none border-[#141414] accent-[#141414]"
+                          />
+                          <span className={cn(isChecked && "font-bold")}>{age}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
             {/* Last Update */}
             <div className="space-y-1">
               <Label className="font-mono text-[10px] font-bold uppercase text-[#141414] flex items-center gap-1">
-                6. LAST UPDATE
+                7. LAST UPDATE
               </Label>
               <select 
                 className="w-full bg-[#f2ece2] border border-[#141414] px-2.5 py-1 text-xs font-mono focus:outline-none focus:bg-white h-9 transition-colors"
@@ -1554,7 +1638,7 @@ export default function App() {
             {/* Search */}
             <div className="space-y-1">
               <Label className="font-mono text-[10px] font-bold uppercase text-[#141414] flex items-center gap-1">
-                7. TÌM KIẾM (SEARCH)
+                8. TÌM KIẾM (SEARCH)
               </Label>
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 opacity-50" />
