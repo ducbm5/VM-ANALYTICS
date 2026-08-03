@@ -560,9 +560,9 @@ export default function App() {
 
       const matchesGender = selectedGender === "all" || (() => {
         const g = p.GENDER?.toUpperCase().trim();
-        if (selectedGender === "Nam") return g === "M" || g === "NAM";
-        if (selectedGender === "Nữ") return g === "F" || g === "NU" || g === "NỮ";
-        if (selectedGender === "Khác") return g !== "M" && g !== "NAM" && g !== "F" && g !== "NU" && g !== "NỮ" && g !== undefined && g !== "";
+        if (selectedGender === "M") return g === "M" || g === "NAM";
+        if (selectedGender === "F") return g === "F" || g === "NU" || g === "NỮ";
+        if (selectedGender === "Other") return g !== "M" && g !== "NAM" && g !== "F" && g !== "NU" && g !== "NỮ" && g !== undefined && g !== "";
         return false;
       })();
 
@@ -816,9 +816,9 @@ export default function App() {
     const total = maleCount + femaleCount + otherCount;
 
     return [
-      { name: "Nam", value: maleCount, revenue: maleRevenue, percentage: total > 0 ? ((maleCount / total) * 100).toFixed(1) : "0" },
-      { name: "Nữ", value: femaleCount, revenue: femaleRevenue, percentage: total > 0 ? ((femaleCount / total) * 100).toFixed(1) : "0" },
-      { name: "Khác/Chưa rõ", value: otherCount, revenue: otherRevenue, percentage: total > 0 ? ((otherCount / total) * 100).toFixed(1) : "0" },
+      { name: "M", value: maleCount, revenue: maleRevenue, percentage: total > 0 ? ((maleCount / total) * 100).toFixed(1) : "0" },
+      { name: "F", value: femaleCount, revenue: femaleRevenue, percentage: total > 0 ? ((femaleCount / total) * 100).toFixed(1) : "0" },
+      { name: "Other", value: otherCount, revenue: otherRevenue, percentage: total > 0 ? ((otherCount / total) * 100).toFixed(1) : "0" },
     ].filter(item => item.value > 0);
   }, [filteredData]);
 
@@ -854,9 +854,9 @@ export default function App() {
     const total = individualCount + groupCount + otherCount;
 
     return [
-      { name: "Cá nhân", value: individualCount, revenue: individualRevenue, percentage: total > 0 ? ((individualCount / total) * 100).toFixed(1) : "0" },
+      { name: "Đơn", value: individualCount, revenue: individualRevenue, percentage: total > 0 ? ((individualCount / total) * 100).toFixed(1) : "0" },
       { name: "Nhóm", value: groupCount, revenue: groupRevenue, percentage: total > 0 ? ((groupCount / total) * 100).toFixed(1) : "0" },
-      { name: "Khác/Chưa xác định", value: otherCount, revenue: otherRevenue, percentage: total > 0 ? ((otherCount / total) * 100).toFixed(1) : "0" },
+      { name: "Khác", value: otherCount, revenue: otherRevenue, percentage: total > 0 ? ((otherCount / total) * 100).toFixed(1) : "0" },
     ].filter(item => item.value > 0);
   }, [filteredData]);
 
@@ -1258,7 +1258,7 @@ export default function App() {
           <span>AUTOSYNC: ACTIVE</span>
         </div>
         <div className="font-bold tracking-wider text-[#ee3260]">
-          {filteredData.length.toLocaleString()} VĐV GHI NHẬN
+          {filteredData.length.toLocaleString()} RUNNERS RECORDED
         </div>
       </div>
 
@@ -1267,7 +1267,7 @@ export default function App() {
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-mono uppercase tracking-widest text-[#ee3260] font-bold flex items-center gap-1.5">
             <span className="inline-block w-2.5 h-2.5 bg-[#ee3260]" />
-            THỐNG KÊ & PHÂN TÍCH DOANH THU & VĐV CHẠY BỘ
+            MARATHON REVENUE & PARTICIPANT ANALYTICS
           </span>
           <Button 
             variant="ghost" 
@@ -1283,11 +1283,11 @@ export default function App() {
               MARATHON ANALYTICS
             </h1>
             <p className="text-xs font-serif italic text-[#141414]/70 mt-2 max-w-2xl">
-              Số liệu tổng hợp từ dữ liệu đăng ký vận động viên giải chạy. Bảng thống kê chi tiết theo từng cự ly, giới tính và giải đấu.
+              Aggregated participant registration data. Detailed breakdown by distance, gender (M / F), and event.
             </p>
           </div>
           <div className="text-right border-l-2 border-[#141414] pl-4 py-1">
-            <p className="text-[10px] font-mono opacity-60 uppercase font-bold">TỔNG DOANH THU LỌC</p>
+            <p className="text-[10px] font-mono opacity-60 uppercase font-bold">FILTERED TOTAL REVENUE</p>
             <p className="text-2xl sm:text-3xl font-serif font-black text-[#141414]">
               {Object.values(revenueStats).reduce((acc, curr) => acc + Object.values(curr).reduce((a, b) => a + b, 0), 0).toLocaleString()} <span className="text-sm font-mono font-normal">VND</span>
             </p>
@@ -1299,10 +1299,10 @@ export default function App() {
       <div className="space-y-3">
         <div className="flex items-center justify-between border-b border-[#141414] pb-1.5">
           <span className="font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-[#141414]">
-            <span>📈</span> I. CHỈ SỐ TỔNG QUAN (KEY DATA GRAPHIC METRICS)
+            <span>📈</span> I. KEY DATA GRAPHIC METRICS
           </span>
           <span className="font-mono text-[10px] opacity-60 uppercase font-bold">
-            MẪU SỐ: {filteredData.length.toLocaleString()} VĐV
+            SAMPLE SIZE: {filteredData.length.toLocaleString()} RUNNERS
           </span>
         </div>
 
@@ -1311,7 +1311,7 @@ export default function App() {
           <div className="border border-[#141414] bg-[#faf6ee] p-4 flex flex-col justify-between space-y-3 relative shadow-[2px_2px_0px_0px_rgba(20,20,20,0.1)]">
             <div className="flex justify-between items-start">
               <span className="text-[10px] font-mono uppercase font-bold text-[#141414]/70 flex items-center gap-1">
-                <Users className="w-3 h-3 text-[#141414]" /> TỔNG VĐV
+                <Users className="w-3 h-3 text-[#141414]" /> TOTAL RUNNERS
               </span>
               <span className="bg-[#141414] text-white px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase">
                 TOTAL
@@ -1322,7 +1322,7 @@ export default function App() {
                 {filteredData.length.toLocaleString()}
               </p>
               <p className="text-[10px] font-mono opacity-60 mt-1">
-                Chiếm {((filteredData.length / (data.length || 1)) * 100).toFixed(1)}% toàn bộ dữ liệu hệ thống
+                {((filteredData.length / (data.length || 1)) * 100).toFixed(1)}% of total system dataset
               </p>
             </div>
             <div className="w-full h-2 bg-[#141414]/10 border border-[#141414]/20 overflow-hidden">
@@ -1334,7 +1334,7 @@ export default function App() {
           <div className="border border-[#141414] bg-[#faf6ee] p-4 flex flex-col justify-between space-y-3 relative shadow-[2px_2px_0px_0px_rgba(20,20,20,0.1)]">
             <div className="flex justify-between items-start">
               <span className="text-[10px] font-mono uppercase font-bold text-[#141414]/70 flex items-center gap-1">
-                <Activity className="w-3 h-3 text-[#141414]" /> GIẢI NỔI BẬT NHẤT
+                <Activity className="w-3 h-3 text-[#141414]" /> TOP RACE
               </span>
               <span className="bg-[#141414] text-white px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase">
                 TOP 1
@@ -1345,7 +1345,7 @@ export default function App() {
                 {topRaceStat.name}
               </p>
               <p className="text-[10px] font-mono opacity-60 mt-1">
-                {topRaceStat.count.toLocaleString()} VĐV LỰA CHỌN ({topRaceStat.percentage}%)
+                {topRaceStat.count.toLocaleString()} RUNNERS ({topRaceStat.percentage}%)
               </p>
             </div>
             <div className="w-full h-2 bg-[#141414]/10 border border-[#141414]/20 overflow-hidden">
@@ -1357,7 +1357,7 @@ export default function App() {
           <div className="border border-[#141414] bg-[#faf6ee] p-4 flex flex-col justify-between space-y-3 relative shadow-[2px_2px_0px_0px_rgba(20,20,20,0.1)]">
             <div className="flex justify-between items-start">
               <span className="text-[10px] font-mono uppercase font-bold text-[#141414]/70 flex items-center gap-1">
-                <Users className="w-3 h-3 text-[#141414]" /> TỶ LỆ GIỚI TÍNH
+                <Users className="w-3 h-3 text-[#141414]" /> GENDER RATIO
               </span>
               <span className="bg-[#141414] text-white px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase">
                 M / F
@@ -1365,11 +1365,11 @@ export default function App() {
             </div>
             <div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-serif font-black text-[#141414]">NAM {genderOverview.malePct}%</span>
-                <span className="text-sm font-serif italic text-[#ee3260]">/ NỮ {genderOverview.femalePct}%</span>
+                <span className="text-2xl font-serif font-black text-[#141414]">M {genderOverview.malePct}%</span>
+                <span className="text-sm font-serif italic text-[#ee3260]">/ F {genderOverview.femalePct}%</span>
               </div>
               <p className="text-[10px] font-mono opacity-60 mt-1">
-                {genderOverview.male.toLocaleString()} Nam vs {genderOverview.female.toLocaleString()} Nữ
+                {genderOverview.male.toLocaleString()} M vs {genderOverview.female.toLocaleString()} F
               </p>
             </div>
             <div className="w-full h-2 bg-[#ee3260] border border-[#141414]/20 overflow-hidden flex">
@@ -1381,18 +1381,19 @@ export default function App() {
           <div className="border border-[#141414] bg-[#faf6ee] p-4 flex flex-col justify-between space-y-3 relative shadow-[2px_2px_0px_0px_rgba(20,20,20,0.1)]">
             <div className="flex justify-between items-start">
               <span className="text-[10px] font-mono uppercase font-bold text-[#141414]/70 flex items-center gap-1">
-                <PieIcon className="w-3 h-3 text-[#141414]" /> LOẠI ĐĂNG KÝ
+                <PieIcon className="w-3 h-3 text-[#141414]" /> REGISTRATION TYPE
               </span>
               <span className="bg-[#141414] text-white px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase">
                 TYPE
               </span>
             </div>
             <div>
-              <p className="text-2xl sm:text-3xl font-serif font-black text-[#141414]">
-                CÁ NHÂN {regTypeOverview.indivPct}%
-              </p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-serif font-black text-[#141414]">ĐƠN {regTypeOverview.indivPct}%</span>
+                <span className="text-sm font-serif italic text-[#ee3260]">/ NHÓM {regTypeOverview.groupPct}%</span>
+              </div>
               <p className="text-[10px] font-mono opacity-60 mt-1">
-                {regTypeOverview.indiv.toLocaleString()} Cá nhân | {regTypeOverview.group.toLocaleString()} Nhóm
+                {regTypeOverview.indiv.toLocaleString()} Đơn vs {regTypeOverview.group.toLocaleString()} Nhóm
               </p>
             </div>
             <div className="w-full h-2 bg-[#ee3260] border border-[#141414]/20 overflow-hidden flex">
@@ -1406,11 +1407,11 @@ export default function App() {
       <div className="space-y-3">
         <div className="flex items-center justify-between border-b border-[#141414] pb-1.5">
           <span className="font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-[#141414]">
-            <span>⚙️</span> Y BỘ LỌC DỮ LIỆU (DATA FILTERS)
+            <span>⚙️</span> DATA FILTERS
           </span>
           <div className="flex items-center gap-3">
             <span className="font-mono text-[10px] font-bold text-[#141414]">
-              Hiển thị: {filteredData.length.toLocaleString()} / {data.length.toLocaleString()} VĐV
+              Showing: {filteredData.length.toLocaleString()} / {data.length.toLocaleString()} Runners
             </span>
             <Button 
               variant="outline" 
@@ -1428,7 +1429,7 @@ export default function App() {
             {/* Race Name */}
             <div className="space-y-1">
               <Label className="font-mono text-[10px] font-bold uppercase text-[#141414] flex items-center gap-1">
-                1. THEO GIẢI (RACE)
+                1. RACE
               </Label>
               <Popover>
                 <PopoverTrigger 
@@ -1493,7 +1494,7 @@ export default function App() {
             {/* Year */}
             <div className="space-y-1">
               <Label className="font-mono text-[10px] font-bold uppercase text-[#141414] flex items-center gap-1">
-                2. THEO NĂM (YEAR)
+                2. YEAR
               </Label>
               <select 
                 className="w-full bg-[#f2ece2] border border-[#141414] px-2.5 py-1 text-xs font-mono focus:outline-none focus:bg-white h-9 transition-colors"
@@ -1508,7 +1509,7 @@ export default function App() {
             {/* Distance */}
             <div className="space-y-1">
               <Label className="font-mono text-[10px] font-bold uppercase text-[#141414] flex items-center gap-1">
-                3. THEO CỰ LY (DISTANCE)
+                3. DISTANCE
               </Label>
               <select 
                 className="w-full bg-[#f2ece2] border border-[#141414] px-2.5 py-1 text-xs font-mono focus:outline-none focus:bg-white h-9 transition-colors"
@@ -1523,7 +1524,7 @@ export default function App() {
             {/* Stage */}
             <div className="space-y-1">
               <Label className="font-mono text-[10px] font-bold uppercase text-[#141414] flex items-center gap-1">
-                4. THEO STAGE
+                4. STAGE
               </Label>
               <select 
                 className="w-full bg-[#f2ece2] border border-[#141414] px-2.5 py-1 text-xs font-mono focus:outline-none focus:bg-white h-9 transition-colors"
@@ -1538,7 +1539,7 @@ export default function App() {
             {/* Gender */}
             <div className="space-y-1">
               <Label className="font-mono text-[10px] font-bold uppercase text-[#141414] flex items-center gap-1">
-                5. GIỚI TÍNH (GENDER)
+                5. GENDER
               </Label>
               <select 
                 className="w-full bg-[#f2ece2] border border-[#141414] px-2.5 py-1 text-xs font-mono focus:outline-none focus:bg-white h-9 transition-colors"
@@ -1546,15 +1547,15 @@ export default function App() {
                 onChange={(e) => setSelectedGender(e.target.value)}
               >
                 <option value="all">All Genders</option>
-                <option value="Nam">Nam</option>
-                <option value="Nữ">Nữ</option>
+                <option value="M">M</option>
+                <option value="F">F</option>
               </select>
             </div>
 
             {/* Age */}
             <div className="space-y-1">
               <Label className="font-mono text-[10px] font-bold uppercase text-[#141414] flex items-center gap-1">
-                6. ĐỘ TUỔI (AGE)
+                6. AGE
               </Label>
               <Popover>
                 <PopoverTrigger 
@@ -1638,7 +1639,7 @@ export default function App() {
             {/* Search */}
             <div className="space-y-1">
               <Label className="font-mono text-[10px] font-bold uppercase text-[#141414] flex items-center gap-1">
-                8. TÌM KIẾM (SEARCH)
+                8. SEARCH
               </Label>
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 opacity-50" />
