@@ -1094,7 +1094,23 @@ export default function App() {
   const allStages = useMemo(() => {
     const stages = new Set<string>();
     data.forEach(p => { if (p.STAGE) stages.add(p.STAGE); });
-    return Array.from(stages).sort();
+
+    const getStageRank = (stageName: string): number => {
+      const s = stageName.trim().toUpperCase();
+      if (s.includes("SUPER EARLY BIRD") || s.includes("SUPER EARLY")) return 1;
+      if (s.includes("EARLY BIRD") || s.includes("EARLY")) return 2;
+      if (s.includes("REGULAR") || s.includes("CHUẨN") || s.includes("CHÍNH THỨC")) return 3;
+      if (s.includes("LATE") || s.includes("MUỘN")) return 4;
+      if (s.includes("DUY NHẤT") || s.includes("SINGLE") || s.includes("GIAI ĐOẠN DUY NHẤT")) return 5;
+      return 99;
+    };
+
+    return Array.from(stages).sort((a, b) => {
+      const rankA = getStageRank(a);
+      const rankB = getStageRank(b);
+      if (rankA !== rankB) return rankA - rankB;
+      return a.localeCompare(b);
+    });
   }, [data]);
 
   const allAges = useMemo(() => {
@@ -1283,7 +1299,7 @@ export default function App() {
               MARATHON ANALYTICS
             </h1>
             <p className="text-xs font-serif italic text-[#141414]/70 mt-2 max-w-2xl">
-              Aggregated participant registration data. Detailed breakdown by distance, gender (M / F), and event.
+              Dữ liệu đăng ký tham gia tổng hợp. Phân tích chi tiết theo cự ly, giới tính (Nam / Nữ) và giải chạy.
             </p>
           </div>
           <div className="text-right border-l-2 border-[#141414] pl-4 py-1">
@@ -1698,54 +1714,53 @@ export default function App() {
         </div>
       </div>
 
-      {/* Revenue Table */}
+      {/* BIB by Distance */}
       <DashboardSection 
-        title="Revenue Breakdown" 
-        icon={<DollarSign className="w-5 h-5" />}
-        description="Total revenue split by race and distance"
+        title="BIBs by Distance" 
+        icon={<Filter className="w-5 h-5" />}
+        description="Participant distribution across distances"
       >
         <div className="max-h-[420px] overflow-auto border border-[var(--line)]/10">
           <Table>
             <TableHeader className="bg-[var(--ink)] sticky top-0 z-10">
               <TableRow className="hover:bg-transparent border-none">
                 <SortableHead 
-                  title="Race Name" 
+                  title="Race" 
                   sortKey="race" 
-                  currentSort={revSort} 
-                  onSort={(k) => handleSortToggle(revSort, setRevSort, k, 'asc')} 
+                  currentSort={distSort} 
+                  onSort={(k) => handleSortToggle(distSort, setDistSort, k, 'asc')} 
                 />
                 {allDistances.map(d => (
                   <SortableHead 
                     key={d} 
-                    title={`${d.toLowerCase().includes("k") ? d : `${d}km`} (VND | %)`} 
+                    title={d.toLowerCase().includes("k") ? d : `${d}km`} 
                     sortKey={d} 
-                    currentSort={revSort} 
-                    onSort={(k) => handleSortToggle(revSort, setRevSort, k, 'desc')} 
-                    align="right" 
+                    currentSort={distSort} 
+                    onSort={(k) => handleSortToggle(distSort, setDistSort, k, 'desc')} 
+                    align="center" 
                   />
                 ))}
                 <SortableHead 
-                  title="Total (VND)" 
+                  title="Total" 
                   sortKey="total" 
-                  currentSort={revSort} 
-                  onSort={(k) => handleSortToggle(revSort, setRevSort, k, 'desc')} 
+                  currentSort={distSort} 
+                  onSort={(k) => handleSortToggle(distSort, setDistSort, k, 'desc')} 
                   align="right" 
                 />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedRevenueData.map(({ race, dists, rowTotal }) => (
+              {sortedBibDistData.map(({ race, dists, rowTotal }) => (
                 <TableRow key={race} className="data-row">
                   <TableCell className="font-serif italic text-base">{race}</TableCell>
                   {allDistances.map(d => {
-                    const val = dists[d];
-                    const pct = rowTotal > 0 && val ? ((val / rowTotal) * 100).toFixed(1) : "0";
+                    const count = dists[d] || 0;
+                    const percentage = rowTotal > 0 && count ? ((count / rowTotal) * 100).toFixed(1) : "0";
                     return (
-                      <TableCell key={d} className="data-value text-right">
-                        {val ? (
+                      <TableCell key={d} className="data-value text-center">
+                        {count ? (
                           <>
-                            {val.toLocaleString()}{" "}
-                            <span className="opacity-40 text-[10px]">| {pct}%</span>
+                            {count} <span className="opacity-40 text-[10px]">| {percentage}%</span>
                           </>
                         ) : (
                           "-"
@@ -1754,7 +1769,7 @@ export default function App() {
                     );
                   })}
                   <TableCell className="data-value text-right font-bold bg-black/5">
-                    {rowTotal.toLocaleString()}
+                    {rowTotal}
                   </TableCell>
                 </TableRow>
               ))}
@@ -1782,7 +1797,7 @@ export default function App() {
                 {allStages.map(s => (
                   <SortableHead 
                     key={s} 
-                    title={`${s} (Count | %)`} 
+                    title={s} 
                     sortKey={s} 
                     currentSort={stageSort} 
                     onSort={(k) => handleSortToggle(stageSort, setStageSort, k, 'desc')} 
@@ -1827,53 +1842,54 @@ export default function App() {
         </div>
       </DashboardSection>
 
-      {/* BIB by Distance */}
+      {/* Revenue Table */}
       <DashboardSection 
-        title="BIBs by Distance" 
-        icon={<Filter className="w-5 h-5" />}
-        description="Participant distribution across distances"
+        title="Revenue Breakdown" 
+        icon={<DollarSign className="w-5 h-5" />}
+        description="Total revenue split by race and distance"
       >
         <div className="max-h-[420px] overflow-auto border border-[var(--line)]/10">
           <Table>
             <TableHeader className="bg-[var(--ink)] sticky top-0 z-10">
               <TableRow className="hover:bg-transparent border-none">
                 <SortableHead 
-                  title="Race" 
+                  title="Race Name" 
                   sortKey="race" 
-                  currentSort={distSort} 
-                  onSort={(k) => handleSortToggle(distSort, setDistSort, k, 'asc')} 
+                  currentSort={revSort} 
+                  onSort={(k) => handleSortToggle(revSort, setRevSort, k, 'asc')} 
                 />
                 {allDistances.map(d => (
                   <SortableHead 
                     key={d} 
-                    title={`${d.toLowerCase().includes("k") ? d : `${d}km`} (Count | %)`} 
+                    title={d.toLowerCase().includes("k") ? d : `${d}km`} 
                     sortKey={d} 
-                    currentSort={distSort} 
-                    onSort={(k) => handleSortToggle(distSort, setDistSort, k, 'desc')} 
-                    align="center" 
+                    currentSort={revSort} 
+                    onSort={(k) => handleSortToggle(revSort, setRevSort, k, 'desc')} 
+                    align="right" 
                   />
                 ))}
                 <SortableHead 
-                  title="Total" 
+                  title="Total (VND)" 
                   sortKey="total" 
-                  currentSort={distSort} 
-                  onSort={(k) => handleSortToggle(distSort, setDistSort, k, 'desc')} 
+                  currentSort={revSort} 
+                  onSort={(k) => handleSortToggle(revSort, setRevSort, k, 'desc')} 
                   align="right" 
                 />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedBibDistData.map(({ race, dists, rowTotal }) => (
+              {sortedRevenueData.map(({ race, dists, rowTotal }) => (
                 <TableRow key={race} className="data-row">
                   <TableCell className="font-serif italic text-base">{race}</TableCell>
                   {allDistances.map(d => {
-                    const count = dists[d] || 0;
-                    const percentage = rowTotal > 0 && count ? ((count / rowTotal) * 100).toFixed(1) : "0";
+                    const val = dists[d];
+                    const pct = rowTotal > 0 && val ? ((val / rowTotal) * 100).toFixed(1) : "0";
                     return (
-                      <TableCell key={d} className="data-value text-center">
-                        {count ? (
+                      <TableCell key={d} className="data-value text-right">
+                        {val ? (
                           <>
-                            {count} <span className="opacity-40 text-[10px]">| {percentage}%</span>
+                            {val.toLocaleString()}{" "}
+                            <span className="opacity-40 text-[10px]">| {pct}%</span>
                           </>
                         ) : (
                           "-"
@@ -1882,7 +1898,7 @@ export default function App() {
                     );
                   })}
                   <TableCell className="data-value text-right font-bold bg-black/5">
-                    {rowTotal}
+                    {rowTotal.toLocaleString()}
                   </TableCell>
                 </TableRow>
               ))}
