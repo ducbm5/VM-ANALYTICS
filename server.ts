@@ -21,7 +21,7 @@ async function startServer() {
   // API route to fetch marathon data from Google Sheets TSV
   app.get("/api/marathon-data", async (req, res) => {
     try {
-      const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTIxhN8X1Ue0i3WOCBU0r1UGJLyR6GzYe9Z4ACLTym_A-FrNqnRdhSs8ZvyNe_78UZEUKioRAc5r8D8/pub?gid=1194946262&single=true&output=tsv";
+      const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQRJBVKWZmPFfnWYSPbIa_-aSNI0XJ2xk-TJ0Syo1VcqhjzcMZaK9GwhFIhkPqVQpQ2zQIO4fVa5G_F/pub?gid=0&single=true&output=tsv";
       const response = await axios.get(url);
       const tsvData = response.data;
       

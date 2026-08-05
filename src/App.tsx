@@ -155,7 +155,7 @@ const SortableHead: React.FC<SortableHeadProps> = ({
   );
 };
 
-const TOP_RACES = ["QN26", "VT26", "NT26", "PT26"];
+const TOP_RACES = ["NA26", "QN26", "VT26", "NT26", "PT26"];
 
 const BASE_RACE_LIST = [
   "HCM25", "HUE25", "AS25", "NA25", "HL25", "QN25", "DN25", "NT25", "CT25",
@@ -478,7 +478,7 @@ export default function App() {
     if (isAuthenticated) {
       const fetchSheetData = async () => {
         try {
-          const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQxuhrc5QjBVqXjzOMvqpUil3_hdl_eX2sqrsTKZPkEs-UBrTqSJUn3fNsB2nJvgggXajcS9bepcRiU/pub?gid=0&single=true&output=tsv";
+          const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQRJBVKWZmPFfnWYSPbIa_-aSNI0XJ2xk-TJ0Syo1VcqhjzcMZaK9GwhFIhkPqVQpQ2zQIO4fVa5G_F/pub?gid=0&single=true&output=tsv";
           // Add cache buster to prevent stale data
           const cacheBuster = `&t=${Date.now()}`;
           const response = await fetch(url + cacheBuster);
@@ -1097,11 +1097,12 @@ export default function App() {
 
     const getStageRank = (stageName: string): number => {
       const s = stageName.trim().toUpperCase();
-      if (s.includes("SUPER EARLY BIRD") || s.includes("SUPER EARLY")) return 1;
-      if (s.includes("EARLY BIRD") || s.includes("EARLY")) return 2;
-      if (s.includes("REGULAR") || s.includes("CHUẨN") || s.includes("CHÍNH THỨC")) return 3;
+      if (s === "SEB" || s.includes("SUPER EARLY BIRD") || s.includes("SUPER EARLY")) return 1;
+      if (s === "EB" || s.includes("EARLY BIRD") || s.includes("EARLY")) return 2;
+      if (s === "RE" || s.includes("REGULAR") || s.includes("CHUẨN") || s.includes("CHÍNH THỨC")) return 3;
       if (s.includes("LATE") || s.includes("MUỘN")) return 4;
-      if (s.includes("DUY NHẤT") || s.includes("SINGLE") || s.includes("GIAI ĐOẠN DUY NHẤT")) return 5;
+      if (s.includes("OTHER") || s.includes("KHÁC") || s.includes("DUY NHẤT") || s.includes("SINGLE") || s.includes("GIAI ĐOẠN DUY NHẤT")) return 5;
+      if (s.includes("IMPORT") || s.includes("NHẬP")) return 6;
       return 99;
     };
 
