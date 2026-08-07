@@ -18,10 +18,23 @@ async function startServer() {
     res.json({ token: "898989" });
   });
 
+  // Google Sheet TSV URLs by year
+  const SHEET_URLS: Record<string, string> = {
+    "2026": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQRJBVKWZmPFfnWYSPbIa_-aSNI0XJ2xk-TJ0Syo1VcqhjzcMZaK9GwhFIhkPqVQpQ2zQIO4fVa5G_F/pub?gid=0&single=true&output=tsv",
+    "2025": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTo87xTtp5O_M6MybyxLFCea6ZdUie-dUW1IJFURUeCxjIYOadAITO0erURBImxPGa1EVNeGS61IGLQ/pub?gid=0&single=true&output=tsv",
+    "2019-2024": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTp_JE6mxA6rQyrQ6coXbYmeL2DVozUC9PbYDMkywZ-1R5kVo7N9cd_-53Bw4uLoWb1jzpbqqjsx6xN/pub?gid=0&single=true&output=tsv"
+  };
+
   // API route to fetch marathon data from Google Sheets TSV
   app.get("/api/marathon-data", async (req, res) => {
     try {
-      const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQRJBVKWZmPFfnWYSPbIa_-aSNI0XJ2xk-TJ0Syo1VcqhjzcMZaK9GwhFIhkPqVQpQ2zQIO4fVa5G_F/pub?gid=0&single=true&output=tsv";
+      const yearParam = (req.query.year as string) || "2026";
+      let key = yearParam;
+      const yrNum = parseInt(yearParam, 10);
+      if (!isNaN(yrNum) && yrNum >= 2019 && yrNum <= 2024) {
+        key = "2019-2024";
+      }
+      const url = SHEET_URLS[key] || SHEET_URLS["2026"];
       const response = await axios.get(url);
       const tsvData = response.data;
       

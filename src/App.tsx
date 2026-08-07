@@ -231,13 +231,68 @@ const parseLastUpdateDate = (dateStr: string): Date | null => {
   return null;
 };
 
+const SHEET_URLS: Record<string, string> = {
+  "2026": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQRJBVKWZmPFfnWYSPbIa_-aSNI0XJ2xk-TJ0Syo1VcqhjzcMZaK9GwhFIhkPqVQpQ2zQIO4fVa5G_F/pub?gid=0&single=true&output=tsv",
+  "2025": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTo87xTtp5O_M6MybyxLFCea6ZdUie-dUW1IJFURUeCxjIYOadAITO0erURBImxPGa1EVNeGS61IGLQ/pub?gid=0&single=true&output=tsv",
+  "2019-2024": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTp_JE6mxA6rQyrQ6coXbYmeL2DVozUC9PbYDMkywZ-1R5kVo7N9cd_-53Bw4uLoWb1jzpbqqjsx6xN/pub?gid=0&single=true&output=tsv"
+};
+
+const getSheetKeyForYear = (year: string): string => {
+  if (year === "2019-2024") return "2019-2024";
+  const num = parseInt(year, 10);
+  if (!isNaN(num) && num >= 2019 && num <= 2024) {
+    return "2019-2024";
+  }
+  return year;
+};
+
+const parseTsvData = (tsvData: string): Participant[] => {
+  const lines = tsvData.split("\n");
+  const result: Participant[] = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const currentLine = lines[i].split("\t");
+    if (currentLine.length === 0 || !currentLine[0]?.trim()) continue;
+    
+    const obj: Participant = {
+      RACE: currentLine[0]?.trim() || "",
+      DISTANCE: currentLine[1]?.trim() || "",
+      GENDER: currentLine[2]?.trim() || "",
+      TXNAMOUNT: currentLine[3]?.trim() || "0",
+      AGE: currentLine[4]?.trim() || "",
+      AGE_GROUP: currentLine[5]?.trim() || "",
+      NATIONALITY: currentLine[6]?.trim() || "",
+      PROVINCE_CITY: currentLine[7]?.trim() || "",
+      REGISTRATION_TYPE: currentLine[8]?.trim() || "",
+      LAST_UPDATE: currentLine[9]?.trim() || "",
+      STAGE: currentLine[10]?.trim() || "",
+      PARTNER_2: currentLine[11]?.trim() || "",
+      PARTNER: currentLine[9]?.trim() || ""
+    };
+    result.push(obj);
+  }
+  return result;
+};
+
+const fetchYearData = async (year: string): Promise<Participant[]> => {
+  const sheetKey = getSheetKeyForYear(year);
+  const url = SHEET_URLS[sheetKey];
+  if (!url) return [];
+  const cacheBuster = `&t=${Date.now()}`;
+  const response = await fetch(url + cacheBuster);
+  if (!response.ok) throw new Error(`Không thể tải dữ liệu năm ${year}`);
+  const tsvText = await response.text();
+  return parseTsvData(tsvText);
+};
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [tokenInput, setTokenInput] = useState("");
   const [authError, setAuthError] = useState(false);
 
-  const [data, setData] = useState<Participant[]>([]);
+  const [loadedData, setLoadedData] = useState<Record<string, Participant[]>>({});
   const [loading, setLoading] = useState(true);
+  const [loadingYear, setLoadingYear] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
   // Auth State
@@ -246,7 +301,7 @@ export default function App() {
 
   // Filters
   const [selectedRaces, setSelectedRaces] = useState<string[]>([]);
-  const [selectedYear, setSelectedYear] = useState<string>("all");
+  const [selectedYear, setSelectedYear] = useState<string>("2026");
   const [selectedDistance, setSelectedDistance] = useState<string>("all");
   const [selectedStage, setSelectedStage] = useState<string>("all");
   const [selectedGender, setSelectedGender] = useState<string>("all");
@@ -255,6 +310,10 @@ export default function App() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [datePreset, setDatePreset] = useState<string>("all");
+
+  const data = useMemo(() => {
+    return Object.values(loadedData).flat();
+  }, [loadedData]);
 
   // AI Analysis State
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
@@ -328,7 +387,7 @@ export default function App() {
 
   const resetFilters = () => {
     setSelectedRaces([]);
-    setSelectedYear("all");
+    setSelectedYear("2026");
     setSelectedDistance("all");
     setSelectedStage("all");
     setSelectedGender("all");
@@ -337,6 +396,45 @@ export default function App() {
     setStartDate("");
     setEndDate("");
     setDatePreset("all");
+  };
+
+  const handleYearChange = async (targetYear: string) => {
+    setSelectedYear(targetYear);
+    setSelectedRaces([]);
+
+    const sheetKeysToFetch = new Set<string>();
+
+    if (targetYear === "all") {
+      if (!loadedData["2026"]) sheetKeysToFetch.add("2026");
+      if (!loadedData["2025"]) sheetKeysToFetch.add("2025");
+      if (!loadedData["2019-2024"]) sheetKeysToFetch.add("2019-2024");
+    } else {
+      const key = getSheetKeyForYear(targetYear);
+      if (!loadedData[key]) {
+        sheetKeysToFetch.add(key);
+      }
+    }
+
+    const keysArray = Array.from(sheetKeysToFetch);
+    if (keysArray.length > 0) {
+      setLoadingYear(keysArray.join(", "));
+      try {
+        const fetchedResults = await Promise.all(
+          keysArray.map(async (key) => ({ key, data: await fetchYearData(key) }))
+        );
+        setLoadedData(prev => {
+          const updated = { ...prev };
+          fetchedResults.forEach(item => {
+            updated[item.key] = item.data;
+          });
+          return updated;
+        });
+      } catch (err) {
+        console.error("Error loading year data:", err);
+      } finally {
+        setLoadingYear(null);
+      }
+    }
   };
 
   const generateAiAnalysis = async () => {
@@ -476,50 +574,21 @@ export default function App() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const fetchSheetData = async () => {
+      const loadInitial = async () => {
+        setLoading(true);
+        setError(null);
         try {
-          const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQRJBVKWZmPFfnWYSPbIa_-aSNI0XJ2xk-TJ0Syo1VcqhjzcMZaK9GwhFIhkPqVQpQ2zQIO4fVa5G_F/pub?gid=0&single=true&output=tsv";
-          // Add cache buster to prevent stale data
-          const cacheBuster = `&t=${Date.now()}`;
-          const response = await fetch(url + cacheBuster);
-          if (!response.ok) throw new Error("Network response was not ok");
-          const tsvData = await response.text();
-          
-          const lines = tsvData.split("\n");
-          const result: Participant[] = [];
-          
-          for (let i = 1; i < lines.length; i++) {
-            const currentLine = lines[i].split("\t");
-            if (currentLine.length === 0 || !currentLine[0]?.trim()) continue;
-            
-            const obj: Participant = {
-              RACE: currentLine[0]?.trim() || "",
-              DISTANCE: currentLine[1]?.trim() || "",
-              GENDER: currentLine[2]?.trim() || "",
-              TXNAMOUNT: currentLine[3]?.trim() || "0",
-              AGE: currentLine[4]?.trim() || "",
-              AGE_GROUP: currentLine[5]?.trim() || "",
-              NATIONALITY: currentLine[6]?.trim() || "",
-              PROVINCE_CITY: currentLine[7]?.trim() || "",
-              REGISTRATION_TYPE: currentLine[8]?.trim() || "",
-              LAST_UPDATE: currentLine[9]?.trim() || "",
-              STAGE: currentLine[10]?.trim() || "",
-              PARTNER_2: currentLine[11]?.trim() || "",
-              PARTNER: currentLine[9]?.trim() || ""
-            };
-            result.push(obj);
-          }
-          
-          setData(result);
-          setLoading(false);
+          const res2026 = await fetchYearData("2026");
+          setLoadedData({ "2026": res2026 });
         } catch (err) {
-          console.error("Error fetching marathon data:", err);
-          setError("Failed to load data from Google Sheets. Please check your internet connection or the sheet's public access.");
+          console.error("Error fetching 2026 marathon data:", err);
+          setError("Không thể tải dữ liệu từ Google Sheets. Vui lòng kiểm tra kết nối mạng.");
+        } finally {
           setLoading(false);
         }
       };
 
-      fetchSheetData();
+      loadInitial();
     }
   }, [isAuthenticated]);
 
@@ -555,6 +624,10 @@ export default function App() {
         if (!p.RACE) return false;
         const match = p.RACE.match(/\d{2}$/);
         const yr = match ? "20" + match[0] : "Khác";
+        if (selectedYear === "2019-2024") {
+          const yrNum = parseInt(yr, 10);
+          return yrNum >= 2019 && yrNum <= 2024;
+        }
         return yr === selectedYear;
       })();
 
@@ -1130,19 +1203,35 @@ export default function App() {
 
   const allRaceNames = useMemo(() => {
     const names = new Set<string>();
-    data.forEach(p => { if (p.RACE) names.add(p.RACE); });
+    data.forEach(p => {
+      if (p.RACE) {
+        if (selectedYear === "all") {
+          names.add(p.RACE);
+        } else if (selectedYear === "2019-2024") {
+          const match = p.RACE.match(/\d{2}$/);
+          const yrNum = match ? parseInt("20" + match[0], 10) : 0;
+          if (yrNum >= 2019 && yrNum <= 2024) {
+            names.add(p.RACE);
+          }
+        } else {
+          const match = p.RACE.match(/\d{2}$/);
+          const yr = match ? "20" + match[0] : "Khác";
+          if (yr === selectedYear) {
+            names.add(p.RACE);
+          }
+        }
+      }
+    });
     return Array.from(names).sort((a, b) => compareRaces(a, b, 'asc'));
-  }, [data]);
+  }, [data, selectedYear]);
 
   const allYears = useMemo(() => {
-    const years = new Set<string>();
+    const years = new Set<string>(["2026", "2025", "2024", "2023", "2022", "2021", "2020", "2019"]);
     data.forEach(p => {
       if (p.RACE) {
         const match = p.RACE.match(/\d{2}$/);
         if (match) {
           years.add("20" + match[0]);
-        } else {
-          years.add("Khác");
         }
       }
     });
@@ -1510,16 +1599,25 @@ export default function App() {
 
             {/* Year */}
             <div className="space-y-1">
-              <Label className="font-mono text-[10px] font-bold uppercase text-[#141414] flex items-center gap-1">
-                2. YEAR
+              <Label className="font-mono text-[10px] font-bold uppercase text-[#141414] flex items-center justify-between">
+                <span>2. YEAR</span>
+                {loadingYear && <span className="text-[#ee3260] text-[9px] font-bold animate-pulse">Đang tải {loadingYear}...</span>}
               </Label>
               <select 
                 className="w-full bg-[#f2ece2] border border-[#141414] px-2.5 py-1 text-xs font-mono focus:outline-none focus:bg-white h-9 transition-colors"
                 value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
+                onChange={(e) => handleYearChange(e.target.value)}
               >
-                <option value="all">All Years</option>
-                {allYears.map(year => <option key={year} value={year}>{year}</option>)}
+                <option value="2026">2026 (Mặc định)</option>
+                <option value="2025">2025 {!loadedData["2025"] ? "(Tải khi chọn)" : " (Đã tải)"}</option>
+                <option value="2024">2024 {!loadedData["2019-2024"] ? "(Tải khi chọn)" : " (Đã tải)"}</option>
+                <option value="2023">2023 {!loadedData["2019-2024"] ? "(Tải khi chọn)" : " (Đã tải)"}</option>
+                <option value="2022">2022 {!loadedData["2019-2024"] ? "(Tải khi chọn)" : " (Đã tải)"}</option>
+                <option value="2021">2021 {!loadedData["2019-2024"] ? "(Tải khi chọn)" : " (Đã tải)"}</option>
+                <option value="2020">2020 {!loadedData["2019-2024"] ? "(Tải khi chọn)" : " (Đã tải)"}</option>
+                <option value="2019">2019 {!loadedData["2019-2024"] ? "(Tải khi chọn)" : " (Đã tải)"}</option>
+                <option value="2019-2024">Các năm 2019 - 2024 {!loadedData["2019-2024"] ? "(Tải khi chọn)" : " (Đã tải)"}</option>
+                <option value="all">Tất cả các năm (2019 - 2026)</option>
               </select>
             </div>
 
