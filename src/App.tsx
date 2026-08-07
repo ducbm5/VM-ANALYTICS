@@ -1616,7 +1616,6 @@ export default function App() {
                 <option value="2021">2021 {!loadedData["2019-2024"] ? "(Tải khi chọn)" : " (Đã tải)"}</option>
                 <option value="2020">2020 {!loadedData["2019-2024"] ? "(Tải khi chọn)" : " (Đã tải)"}</option>
                 <option value="2019">2019 {!loadedData["2019-2024"] ? "(Tải khi chọn)" : " (Đã tải)"}</option>
-                <option value="2019-2024">Các năm 2019 - 2024 {!loadedData["2019-2024"] ? "(Tải khi chọn)" : " (Đã tải)"}</option>
                 <option value="all">Tất cả các năm (2019 - 2026)</option>
               </select>
             </div>
